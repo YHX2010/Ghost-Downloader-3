@@ -4,6 +4,7 @@ import sys
 from ctypes.wintypes import MSG
 from pathlib import Path
 
+import ctypes.wintypes
 import darkdetect
 from PySide6.QtCore import QSize, QThread, Signal, QTimer, QPropertyAnimation, QRect, QUrl
 from PySide6.QtGui import QIcon, QDragEnterEvent, QDropEvent, QKeySequence, QDesktopServices, QColor, Qt
@@ -22,18 +23,7 @@ from ..common.signal_bus import signalBus
 from ..components.add_task_dialog import AddTaskOptionDialog
 from ..components.custom_tray import CustomSystemTrayIcon
 from ..components.update_dialog import checkUpdate
-
-
-def updateFrameless(self):
-    stayOnTop = Qt.WindowStaysOnTopHint if self.windowFlags() & Qt.WindowStaysOnTopHint else 0
-    self.setWindowFlags(Qt.FramelessWindowHint | stayOnTop)
-
-    self.windowEffect.enableBlurBehindWindow(self.winId())
-    self.windowEffect.addWindowAnimation(self.winId())
-
-    self.windowEffect.setAcrylicEffect(self.winId())
-    if isGreaterEqualWin11():
-        self.windowEffect.addShadowEffect(self.winId())
+#from AppKit import NSEvent
 
 class CustomSplashScreen(SplashScreen):
 
@@ -184,10 +174,15 @@ class MainWindow(MSFluentWindow):
         self.browserExtensionServer = None
 
     def toggleTheme(self, callback: str):
-        if callback == 'Dark':  # MS 特性，需要重试
-            setTheme(Theme.DARK, save=False, lazy=True)
-            if cfg.backgroundEffect.value in ['Mica', 'MicaBlur', 'MicaAlt']:
-                QTimer.singleShot(500, self.applyBackgroundEffectByCfg)
+        if callback == 'Dark':  # PySide6 特性，需要重试
+            setTheme(Theme.DARK, save=False)
+            try:
+                if cfg.backgroundEffect.value in ['Mica', 'MicaBlur', 'MicaAlt']:
+                    QTimer.singleShot(100, self.applyBackgroundEffectByCfg)
+                    QTimer.singleShot(200, self.applyBackgroundEffectByCfg)
+                    QTimer.singleShot(300, self.applyBackgroundEffectByCfg)
+            except AttributeError:
+                pass
 
         elif callback == 'Light':
             setTheme(Theme.LIGHT, save=False, lazy=True)
@@ -325,11 +320,19 @@ class MainWindow(MSFluentWindow):
                 bringWindowToTop(self)
                 return True, 0
 
-            if msg.message == 7 and isBorderAccentColorOpen():
-                self.windowEffect.setBorderAccentColor(self.winId(), themeColor())
-
-            if msg.message == 8 and isBorderAccentColorOpen():
-                self.windowEffect.removeBorderAccentColor(self.winId())
+        '''# macOS暂时没有好的解决方案，先搁浅吧
+        elif eventType == "NSEvent":
+            # 从void指针获取NSEvent对象
+            print(message,message.__int__())
+            event_ptr = ctypes.pointer(message)
+            nsEvent = NSEvent.eventWithEventRef_(event_ptr)
+            #nsEvent = shiboken6.wrapInstance(event_ptr.value, NSEvent)
+            
+            # 检查是否是重新打开事件
+            if nsEvent.type() == 8:  # NSApplicationDefined = 8
+                self.show()
+                return True, 0
+        '''
 
         return super().nativeEvent(eventType, message)
 

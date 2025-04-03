@@ -547,7 +547,7 @@ class SettingInterface(SmoothScrollArea):
                                 <string>com.xiaoyouchr.ghostdownloader</string>
                                 <key>ProgramArguments</key>
                                 <array>
-                                <string>'{QApplication.applicationFilePath()}'</string>
+                                <string>{QApplication.applicationFilePath()}</string>
                                 <string>--silence</string>
                                 </array>
                                 <key>RunAtLoad</key>
